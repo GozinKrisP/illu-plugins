@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.plugins.iherbcleaner.Task;
 import net.runelite.client.plugins.iherbcleaner.iHerbCleanerPlugin;
-import net.runelite.client.plugins.iutils.ActionQueue;
 import net.runelite.client.plugins.iutils.BankUtils;
 import net.runelite.client.plugins.iutils.InventoryUtils;
 
@@ -17,9 +16,6 @@ import static net.runelite.client.plugins.iherbcleaner.iHerbCleanerPlugin.status
 public class BankItemsTask extends Task {
 
     @Inject
-    ActionQueue action;
-
-    @Inject
     InventoryUtils inventory;
 
     @Inject
@@ -27,25 +23,28 @@ public class BankItemsTask extends Task {
 
     @Override
     public boolean validate() {
-        return action.delayedActions.isEmpty() && !inventory.containsItem(config.herbID()) &&
-                bank.isOpen();
+        // Task ini jalan hanya jika bank terbuka
+        return bank.isOpen();
     }
 
     @Override
     public String getTaskDescription() {
-        return iHerbCleanerPlugin.status;
+        return status;
     }
 
     @Override
     public void onGameTick(GameTick event) {
-        long sleep = 0;
+
         if (!inventory.isEmpty()) {
+            // Deposit semua item di inventory
             status = "Depositing items";
-            bank.depositAll();
+            bank.depositAllItems(); // pastikan method ini klik 'Deposit All' secara aman
         } else {
-            status = "Withdrawing items";
-            if (bank.contains(config.herbID(), 1)) {
-                bank.withdrawAllItem(config.herbID());
+            // Withdraw full inventory dari herb yang dipilih
+            int herbID = config.herbID();
+            if (bank.contains(herbID, 1)) {
+                bank.withdrawAllItem(herbID);
+                status = "Withdrawing herb ID: " + herbID;
             } else {
                 status = "Out of herbs to clean, stopping";
                 utils.sendGameMessage(status);
